@@ -5,26 +5,160 @@ pipeline:
   orgIdentifier: migrate_demo
   stages:
     - stage:
-        name: Build
-        identifier: Build
-        type: CI
+        identifier: testjs
+        name: test_js
         spec:
           cloneCodebase: true
-          infrastructure:
-            type: KubernetesHosted
-            spec:
-              identifier: k8s-hosted-infra
           execution:
             steps:
               - step:
-                  type: Run
-                  name: Echo Welcome Message
-                  identifier: Echo_Welcome_Message
+                  envVariables:
+                    MOZ_HEADLESS: "1"
+                  identifier: firefoxsetup
+                  name: firefox_setup
                   spec:
-                    connectorRef: account.harnessImage
-                    image: alpine
-                    shell: Sh
-                    command: echo "Welcome to Harness CI"
+                    command: curl https://raw.githubusercontent.com/CircleCI-Public/browser-tools-orb/v1.1.1/src/scripts/install-firefox.sh | bash
+                    envVariables:
+                      HOME: /root
+                      ORB_PARAM_FIREFOX_INSTALL_DIR: /usr/local/bin
+                      ORB_PARAM_FIREFOX_VERSION: 86.0.1
+                  timeout: ""
+                  type: Run
+              - step:
+                  name: lint
+                  identifier: lint
+                  envVariables:
+                    MOZ_HEADLESS: "1"
+                  spec:
+                    command: make -C fathom lint test
+                    image: cimg/node:15.3.0-browsers
+                  timeout: ""
+                  type: Run
+              - step:
+                  envVariables:
+                    MOZ_HEADLESS: "1"
+                  identifier: publishcodecoverageifonmaster
+                  name: Publish code coverage if on master
+                  spec:
+                    command: |
+                      if [ ! -z "$COVERALLS_REPO_TOKEN" ]
+                      then
+                          make -C fathom coveralls
+                      fi
+                    image: cimg/node:15.3.0-browsers
+                  timeout: ""
+                  type: Run
+          platform:
+            arch: Amd64
+            os: Linux
+          runtime:
+            spec: {}
+            type: Cloud
+        type: CI
+    - stage:
+        identifier: testpython
+        name: test_python
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  envVariables:
+                    MOZ_HEADLESS: "1"
+                  identifier: firefoxsetup1
+                  name: firefox_setup
+                  spec:
+                    command: curl https://raw.githubusercontent.com/CircleCI-Public/browser-tools-orb/v1.1.1/src/scripts/install-firefox.sh | bash
+                    envVariables:
+                      HOME: /root
+                      ORB_PARAM_FIREFOX_INSTALL_DIR: /usr/local/bin
+                      ORB_PARAM_FIREFOX_VERSION: 86.0.1
+                  timeout: ""
+                  type: Run
+              - step:
+                  envVariables:
+                    MOZ_HEADLESS: "1"
+                  identifier: restorecache
+                  name: restore_cache
+                  spec:
+                    image: plugins/cache
+                    settings:
+                      access_key: <+ secrets.getValue("aws_access_key_id") >
+                      archive_format: tar
+                      backend: s3
+                      backend_operation_timeout: 1800s
+                      bucket: <+ secrets.getValue("aws_bucket") >
+                      cache_key: ""
+                      exit_code: "true"
+                      fail_restore_if_key_not_present: "false"
+                      region: <+ secrets.getValue("aws_region") >
+                      restore: "true"
+                      secret_key: <+ secrets.getValue("aws_secret_access_key") >
+                  timeout: ""
+                  type: Plugin
+              - step:
+                  envVariables:
+                    MOZ_HEADLESS: "1"
+                  identifier: lint
+                  name: lint
+                  spec:
+                    command: make -C cli lint test
+                    image: cimg/python:3.7.9-node
+                  timeout: ""
+                  type: Run
+              - step:
+                  envVariables:
+                    MOZ_HEADLESS: "1"
+                  identifier: docs
+                  name: docs
+                  spec:
+                    command: make docs
+                    image: cimg/python:3.7.9-node
+                  timeout: ""
+                  type: Run
+              - step:
+                  envVariables:
+                    MOZ_HEADLESS: "1"
+                  identifier: savecache
+                  name: save_cache
+                  spec:
+                    image: plugins/cache
+                    settings:
+                      access_key: <+ secrets.getValue("aws_access_key_id") >
+                      archive_format: tar
+                      backend: s3
+                      backend_operation_timeout: 1800s
+                      bucket: <+ secrets.getValue("aws_bucket") >
+                      cache_key: venv-v1-{{ arch }}-{{ checksum "cli/dev-requirements.txt" }}-{{ checksum "cli/doc-building-requirements.txt" }}-{{ checksum "cli/setup.py" }}
+                      exit_code: "true"
+                      fail_restore_if_key_not_present: "false"
+                      mount: "[cli/venv]"
+                      rebuild: "true"
+                      region: <+ secrets.getValue("aws_region") >
+                      secret_key: <+ secrets.getValue("aws_secret_access_key") >
+                  timeout: ""
+                  type: Plugin
+              - step:
+                  envVariables:
+                    MOZ_HEADLESS: "1"
+                  identifier: publishdocsifonmaster
+                  name: Publish docs if on master
+                  spec:
+                    command: |
+                      if [ ! -z "$GH_TOKEN" ]
+                      then
+                          echo docs/deploy-docs
+                      fi
+                    image: cimg/python:3.7.9-node
+                  timeout: ""
+                  type: Run
+          platform:
+            arch: Amd64
+            os: Linux
+          runtime:
+            spec: {}
+            type: Cloud
+        type: CI
   properties:
     ci:
       codebase:
