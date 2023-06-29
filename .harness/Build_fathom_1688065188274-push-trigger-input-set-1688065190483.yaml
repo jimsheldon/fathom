@@ -1,0 +1,14 @@
+inputSet:
+  name: Build_fathom_1688065188274-push-trigger-input-set
+  identifier: Build_fathom_1688065188274pushtriggerinputset
+  orgIdentifier: migrate_demo
+  projectIdentifier: example
+  pipeline:
+    identifier: Build_fathom_1688065188274
+    properties:
+      ci:
+        codebase:
+          build:
+            type: branch
+            spec:
+              branch: <+trigger.branch>
