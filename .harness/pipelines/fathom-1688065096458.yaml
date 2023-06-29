@@ -17,7 +17,7 @@ pipeline:
                   identifier: firefoxsetup
                   name: firefox_setup
                   spec:
-                    command: curl https://raw.githubusercontent.com/CircleCI-Public/browser-tools-orb/v1.1.1/src/scripts/install-firefox.sh | bash
+                    command: curl https://raw.githubusercontent.com/CircleCI-Public/browser-tools-orb/v1.3.0/src/scripts/install-firefox.sh | bash
                     envVariables:
                       HOME: /root
                       ORB_PARAM_FIREFOX_INSTALL_DIR: /usr/local/bin
