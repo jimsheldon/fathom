@@ -31,7 +31,6 @@ pipeline:
                     MOZ_HEADLESS: "1"
                   spec:
                     command: make -C fathom lint test
-                    image: cimg/node:15.3.0-browsers
                   timeout: ""
                   type: Run
               - step:
